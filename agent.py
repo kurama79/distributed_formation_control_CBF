@@ -1197,7 +1197,7 @@ class Agent:
         elif h_function == 3:
             
             arg = np.sqrt((x - x_o)**2 + (y - y_o)**2) - d
-            arg_dot = ((x - x_o)*u_x + (y - y_o)*u_y)/np.sqrt((x - x_o)**2 + (y - y_o)**2)
+            arg_dot = -(2*(x - x_o)*u_x + 2*(y - y_o)*u_y)/np.sqrt((x - x_o)**2 + (y - y_o)**2)
             h = 1/arg
             h_dot = arg_dot/arg**2
             
@@ -1215,7 +1215,7 @@ class Agent:
         elif h_function == 5:
             
             arg = (x - x_o)**2 + (y - y_o)**2 - d**2
-            arg_dot = 2*(x - x_o)*u_x + 2*(y - y_o)*u_y
+            arg_dot = 2*(x - x_o)*(2*d**2 + 1)*u_x + 2*(y - y_o)*(2*d**2 + 1)*u_y
             h = -np.log( arg/(1+arg) )
             h_dot = -arg_dot/(arg**2 + arg)
             
@@ -1223,7 +1223,7 @@ class Agent:
         
         return h_dot + alpha*h
     
-    def HO_psi_function(self, n, udX, udY, b=1, alphas=[6.0, 6.0]):
+    def HO_psi_function(self, n, udX, udY, b=3, alphas=[7.5, 4.5]):
         
         '''
             Psi function for high order method
@@ -1250,6 +1250,43 @@ class Agent:
             # return h_ddot + alphas[1]*(h_dot + alphas[0]*h) + alphas[0]*(h_dot)
             return h_ddot + alphas[0]*h_dot + alphas[1]*(h_dot + alphas[0]*h) 
             # return h_ddot + (h_dot + h**2)**2 + (h_dot)**2
+            
+        elif b == 2: # For the first barrier function (reciprocal)
+            
+            ex = x - xo
+            ey = y - yo
+            
+            arg = np.sqrt(ex**2 + ey**2) - d
+            arg_dot = -d * np.sqrt(ex**2 + ey**2) + ex**2 + ey**2
+            arg_ddot_x = ex*(xo*x_vel + yo*y_vel - x*x_vel - y*y_vel)*(2 - (d)/(arg+d)) + x_vel*(ex**2 + ey**2 - d*(arg+d))
+            arg_ddot_y = ey*(xo*x_vel + yo*y_vel - x*x_vel - y*y_vel)*(2 - (d)/(arg+d)) + y_vel*(ex**2 + ey**2 - d*(arg+d))
+            
+            h = -np.log(arg)
+            h_dot = -(x*x_vel + y*y_vel)/arg_dot
+            h_ddot = -(arg_ddot_x*udX + arg_ddot_y*udY)/arg_dot**2
+            
+            return h_ddot + alphas[0]*h_dot + alphas[1]*(h_dot + alphas[0]*h) 
+        
+        elif b == 3: # Robust recirpocal function
+            
+            ex = x - xo
+            ey = y - yo
+            
+            arg = ex**2 + ey**2 - d**2
+            arg_dot = 2*ex*(2*d**2 + 1)*x_vel + 2*ey*(2*d**2 + 1)*y_vel
+            arg_ddot_x = 2*(2*d**2)*(-2*ex*(2*arg + 1))*(xo*x_vel + yo*y_vel - x*x_vel - y*y_vel) - x_vel*(arg**2 + arg)
+            arg_ddot_y = 2*(2*d**2)*(-2*ey*(2*arg + 1))*(xo*x_vel + yo*y_vel - x*x_vel - y*y_vel) - y_vel*(arg**2 + arg)
+            
+            h = -np.log( arg/(1+arg) )
+            h_dot = -arg_dot/(arg**2 + arg)
+            h_ddot = (arg_ddot_x*udX + arg_ddot_y*udY)/(arg**2 + arg)**2
+            
+            # h = 1/h
+            # h_dot = 1/h_dot
+            
+            return h_ddot + (h_dot)**3 + (h_dot + (h)**3)**3
+            # return h_ddot + alphas[0]*(h_dot) + alphas[1]*(h_dot + alphas[0]*(h))
+            # return h_ddot + alphas[0]*(1/h_dot) + alphas[1]*(h_dot + alphas[0]*(1/h))
     
     def detect_collsion(self, d=1.0):
         
@@ -1301,6 +1338,8 @@ class Agent:
             self.data_pos_y_.append(self.y_)
             self.data_vel_x_.append(self.vel_x_)
             self.data_vel_y_.append(self.vel_y_)
+            self.data_acc_x_.append(self.acc_x_)
+            self.data_acc_y_.append(self.acc_y_)
             
             return
         
@@ -1310,6 +1349,8 @@ class Agent:
             self.data_pos_y_.append(self.y_)
             self.data_vel_x_.append(self.vel_x_)
             self.data_vel_y_.append(self.vel_y_)
+            self.data_acc_x_.append(self.acc_x_)
+            self.data_acc_y_.append(self.acc_y_)
             
             self.data_desired_vel_x_.append(self.ud_x_)
             self.data_desired_vel_y_.append(self.ud_y_)

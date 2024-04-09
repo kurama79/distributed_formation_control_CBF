@@ -27,7 +27,7 @@ if __name__ == '__main__':
 # def main():
 
     # General variables
-    agentsNumber = 5 # Number of agents in the network
+    agentsNumber = 3 # Number of agents in the network
     obstaclesNumber = 8 # Number of the obstacles in the environment
     CBFmethod = 4 # Here que define which technic of CBF use
     
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     # plot_.initial_configuration(leader, agents, obstacles)
     # plot_.final_configuration(leader, agents, obstacles)
     # plot_.variables_vs_time_1st(leader, agents, time_data, simTime)
-    plot_.variables_vs_time_1st(leaderQ, agentsQ, time_data, simTime)
+    plot_.variables_vs_time(leaderQ, agentsQ, time_data, simTime)
     # plot_.barrier_action(agents, time_data, simTime)
     # plot_.path(leader, agents, obst=obstacles)
     plot_.path(leaderQ, agentsQ, obst=obstacles)

@@ -87,7 +87,7 @@ def final_configuration(leader, agents, obst=None):
     plt.legend()
     plt.show()
     
-def variables_vs_time_1st(leader, agents, t_data, simTime):
+def variables_vs_time(leader, agents, t_data, simTime):
     
     '''
         Here we visualize the agents' variables along the time in 1st order
@@ -134,14 +134,32 @@ def variables_vs_time_1st(leader, agents, t_data, simTime):
     plt.xlabel(r"Time $(s)$")
     plt.legend()
     
-    # Desired Velocity
+    # Acceleration
+    figxa, axxa = plt.subplots(2, 1)
+    figxa.suptitle('Accelerations')
+    axxa[0].plot(t_data, leader.data_acc_x_, '--', color='black', label=r"Leader")
+    for i, agent in enumerate(agents):
+        axxa[0].plot(t_data, agent.data_acc_x_, '-', color=colors[i], label="Agent {}".format(i+1))
+    axxa[1].plot(t_data, leader.data_acc_y_, '--', color='black', label=r"Leader")
+    for i, agent in enumerate(agents):
+        axxa[1].plot(t_data, agent.data_acc_y_, '-', color=colors[i], label="Agent {}".format(i+1))   
+    axxa[0].set_ylabel(r"$x$-acc")
+    axxa[1].set_ylabel(r"$y$-acc")
+    axxa[0].set_xlim(0, simTime)
+    axxa[1].set_xlim(0, simTime)
+    axxa[0].grid()
+    axxa[1].grid()
+    plt.xlabel(r"Time $(s)$")
+    plt.legend()
+    
+    # Desired Control
     figd, axd = plt.subplots(2, 1)
-    figd.suptitle('Desired Velocities')
+    figd.suptitle('Desired Controls')
     for i, agent in enumerate(agents):
         axd[0].plot(t_data, agent.data_desired_vel_x_, '-', color=colors[i], label="Agent {}".format(i+1))
         axd[1].plot(t_data, agent.data_desired_vel_y_, '-', color=colors[i], label="Agent {}".format(i+1))   
-    axd[0].set_ylabel(r"$x$-vel")
-    axd[1].set_ylabel(r"$y$-vel")
+    axd[0].set_ylabel(r"$x$-acc")
+    axd[1].set_ylabel(r"$y$-acc")
     axd[0].set_xlim(0, simTime)
     axd[1].set_xlim(0, simTime)
     axd[0].grid()
@@ -149,14 +167,14 @@ def variables_vs_time_1st(leader, agents, t_data, simTime):
     plt.xlabel(r"Time $(s)$")
     plt.legend()
     
-    # Safety Velocity
+    # Safety Control
     figs, axs = plt.subplots(2, 1)
-    figs.suptitle('Safety Velocities')
+    figs.suptitle('Safety Controls')
     for i, agent in enumerate(agents):
         axs[0].plot(t_data, agent.data_safety_vel_x_, '-', color=colors[i], label="Agent {}".format(i+1))
         axs[1].plot(t_data, agent.data_safety_vel_y_, '-', color=colors[i], label="Agent {}".format(i+1))   
-    axs[0].set_ylabel(r"$x$-vel")
-    axs[1].set_ylabel(r"$y$-vel")
+    axs[0].set_ylabel(r"$x$-acc")
+    axs[1].set_ylabel(r"$y$-acc")
     axs[0].set_xlim(0, simTime)
     axs[1].set_xlim(0, simTime)
     axs[0].grid()
@@ -200,23 +218,86 @@ def variables_vs_time_1st(leader, agents, t_data, simTime):
             plt.xlim(0, simTime)
             plt.legend()
     
-    fig_psi, ax_psi = plt.subplots(len(agents), 1, sharex=True)
-    fig_psi.suptitle('Psi functions')
-    for i, agent in enumerate(agents):
+    # # Psi function
+    # fig_psi, ax_psi = plt.subplots(len(agents), 1, sharex=True)
+    # fig_psi.suptitle('Psi functions')
+    # for i, agent in enumerate(agents):
         
-        for psi in agent.psi_0:
-            try:
-                ax_psi[i].plot(t_data, agent.psi_0[psi], '-', color=colors[i])
-                ax_psi[i].plot(t_data, agent.psi_1[psi], '-', color=colors[i])
-            except:
-                print(agent.psi_0[psi])
-                print(agent.psi_1[psi])
+    #     for psi in agent.psi_0:
+    #         try:
+    #             ax_psi[i].plot(t_data, agent.psi_0[psi], '-', color=colors[i])
+    #             ax_psi[i].plot(t_data, agent.psi_1[psi], '-', color=colors[i])
+    #         except:
+    #             print(agent.psi_0[psi])
+    #             print(agent.psi_1[psi])
             
-        ax_psi[i].set_ylabel(r"Psi value")
-        ax_psi[i].grid()
+    #     ax_psi[i].set_ylabel(r"Psi value")
+    #     ax_psi[i].grid()
         
+    # plt.xlabel(r"Time $(s)$")
+    # plt.xlim(0, simTime)
+    
+    # Show the plots
+    plt.show()
+    
+def variables_vs_time_2nd(leader, agents, t_data, simTime):
+    
+    '''
+        Here we visualize the agents' variables along the time in 1st order
+            leader -> the leader object
+            agents -> the agents list of objects
+            t_data -> time along the simulation
+    '''
+    
+    colors = cmx.rainbow(np.linspace(0, 1, len(agents)))
+    
+    # Acceleration
+    figx, axx = plt.subplots(2, 1)
+    figx.suptitle('Accelerations')
+    axx[0].plot(t_data, leader.data_acc_x_, '--', color='black', label=r"Leader")
+    for i, agent in enumerate(agents):
+        axx[0].plot(t_data, agent.data_acc_x_, '-', color=colors[i], label="Agent {}".format(i+1))
+    axx[1].plot(t_data, leader.data_acc_y_, '--', color='black', label=r"Leader")
+    for i, agent in enumerate(agents):
+        axx[1].plot(t_data, agent.data_acc_y_, '-', color=colors[i], label="Agent {}".format(i+1))   
+    axx[0].set_ylabel(r"$x$-acc")
+    axx[1].set_ylabel(r"$y$-acc")
+    axx[0].set_xlim(0, simTime)
+    axx[1].set_xlim(0, simTime)
+    axx[0].grid()
+    axx[1].grid()
     plt.xlabel(r"Time $(s)$")
-    plt.xlim(0, simTime)
+    plt.legend()
+    
+    # Desired Velocity
+    figd, axd = plt.subplots(2, 1)
+    figd.suptitle('Desired Accelerations')
+    for i, agent in enumerate(agents):
+        axd[0].plot(t_data, agent.data_desired_vel_x_, '-', color=colors[i], label="Agent {}".format(i+1))
+        axd[1].plot(t_data, agent.data_desired_vel_y_, '-', color=colors[i], label="Agent {}".format(i+1))   
+    axd[0].set_ylabel(r"$x$-acc")
+    axd[1].set_ylabel(r"$y$-acc")
+    axd[0].set_xlim(0, simTime)
+    axd[1].set_xlim(0, simTime)
+    axd[0].grid()
+    axd[1].grid()
+    plt.xlabel(r"Time $(s)$")
+    plt.legend()
+    
+    # Safety Velocity
+    figs, axs = plt.subplots(2, 1)
+    figs.suptitle('Safety Acclerations')
+    for i, agent in enumerate(agents):
+        axs[0].plot(t_data, agent.data_safety_vel_x_, '-', color=colors[i], label="Agent {}".format(i+1))
+        axs[1].plot(t_data, agent.data_safety_vel_y_, '-', color=colors[i], label="Agent {}".format(i+1))   
+    axs[0].set_ylabel(r"$x$-acc")
+    axs[1].set_ylabel(r"$y$-acc")
+    axs[0].set_xlim(0, simTime)
+    axs[1].set_xlim(0, simTime)
+    axs[0].grid()
+    axs[1].grid()
+    plt.xlabel(r"Time $(s)$")
+    plt.legend()
     
     # Show the plots
     plt.show()
