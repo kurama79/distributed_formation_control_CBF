@@ -103,7 +103,7 @@ def desired_references(agents, leader, distance=4.0, shape=0):
         agents[0].generate_displacement_variables(leader)
         agents[0].distance_between_agents_ = 0.0
 
-def initial_conditions(agent, center, neighbors, random, maxD=7.0, minD=4.0):
+def initial_conditions(agent, center, neighbors, random, maxD=10.0, minD=5.0):
     
     '''
         Generate the connectivity square matrix it must be connected:
