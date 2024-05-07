@@ -152,6 +152,7 @@ def variables_vs_time(leader, agents, t_data, simTime):
     plt.xlabel(r"Time $(s)$")
     plt.legend()
     
+    # ax.set_ylim(-20, 20)
     # Desired Control
     figd, axd = plt.subplots(2, 1)
     figd.suptitle('Desired Controls')
@@ -223,16 +224,26 @@ def variables_vs_time(leader, agents, t_data, simTime):
     # fig_psi.suptitle('Psi functions')
     # for i, agent in enumerate(agents):
         
-    #     for psi in agent.psi_0:
-    #         try:
-    #             ax_psi[i].plot(t_data, agent.psi_0[psi], '-', color=colors[i])
-    #             ax_psi[i].plot(t_data, agent.psi_1[psi], '-', color=colors[i])
-    #         except:
-    #             print(agent.psi_0[psi])
-    #             print(agent.psi_1[psi])
+    #     if len(agent.psi_ag) == len(t_data):
             
-    #     ax_psi[i].set_ylabel(r"Psi value")
-    #     ax_psi[i].grid()
+    #         ax_psi[i].plot(t_data, agent.psi_ag, '-', color=colors[i])
+                
+    #         ax_psi[i].set_ylabel(r"Psi value")
+    #         ax_psi[i].grid()
+        
+    # plt.xlabel(r"Time $(s)$")
+    # plt.xlim(0, simTime)
+    
+    # fig_psi_o, ax_psi_o = plt.subplots(len(agents), 1, sharex=True)
+    # fig_psi_o.suptitle('Psi functions Obstacles')
+    # for i, agent in enumerate(agents):
+        
+    #     if len(agent.psi_obs) == len(t_data):
+        
+    #         ax_psi_o[i].plot(t_data, agent.psi_obs, '-', color=colors[i])
+                
+    #         ax_psi_o[i].set_ylabel(r"Psi value")
+    #         ax_psi_o[i].grid()
         
     # plt.xlabel(r"Time $(s)$")
     # plt.xlim(0, simTime)
