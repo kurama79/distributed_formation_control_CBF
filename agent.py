@@ -942,7 +942,7 @@ class Agent:
                 
                 for n in self.neighbors_:
                     
-                    psi = self.HO_psi_function(n, udX, udY, b=1)
+                    psi = self.HO_psi_function(n, udX, udY, b=3, obsType='robot')
                     
                     # Consider the no reciprocal function
                     ex = self.x_ - n.x_
@@ -963,7 +963,7 @@ class Agent:
                 
                 for obs in self.obstacles_:
                     
-                    psi = self.HO_psi_function(obs, udX, udY, b=1)
+                    psi = self.HO_psi_function(obs, udX, udY, b=1, obsType='circle')
                     
                     ex = self.x_ - obs.x_
                     ey = self.y_ - obs.y_
@@ -1223,12 +1223,21 @@ class Agent:
         
         return h_dot + alpha*h
     
-    def HO_psi_function(self, n, udX, udY, b=3, alphas=[7.5, 4.5]):
+    def HO_psi_function(self, n, udX, udY, b=3, obsType='circle', alphas=[9.0, 4.5]):
         
         '''
             Psi function for high order method
             Select the barrier function
         '''
+        
+        if obsType == 'circle':
+            d = n.radius_ + self.radius_
+            
+        elif obsType == 'robot':
+            d = n.radius_
+            
+        else:
+            raise ValueError('Obstacle type error, It must be "circle" or "robot"')
         
         # Data
         x = self.x_
@@ -1236,7 +1245,7 @@ class Agent:
         xo = n.x_
         yo = n.y_
         
-        d = n.radius_
+        d = n.radius_ + self.radius_
         
         x_vel = self.vel_x_
         y_vel = self.vel_y_
@@ -1249,7 +1258,7 @@ class Agent:
             
             # return h_ddot + alphas[1]*(h_dot + alphas[0]*h) + alphas[0]*(h_dot)
             return h_ddot + alphas[0]*h_dot + alphas[1]*(h_dot + alphas[0]*h) 
-            # return h_ddot + (h_dot + h**2)**2 + (h_dot)**2
+            # return h_ddot + (h_dot + h**3)**3 + (h_dot)**3
             
         elif b == 2: # For the first barrier function (reciprocal)
             
@@ -1265,7 +1274,8 @@ class Agent:
             h_dot = -(x*x_vel + y*y_vel)/arg_dot
             h_ddot = -(arg_ddot_x*udX + arg_ddot_y*udY)/arg_dot**2
             
-            return h_ddot + alphas[0]*h_dot + alphas[1]*(h_dot + alphas[0]*h) 
+            # return h_ddot + alphas[0]*h_dot + alphas[1]*(h_dot + alphas[0]*h) 
+            return h_ddot + (h_dot)**3 + (h_dot + (h)**3)**3
         
         elif b == 3: # Robust recirpocal function
             
@@ -1284,8 +1294,8 @@ class Agent:
             # h = 1/h
             # h_dot = 1/h_dot
             
-            return h_ddot + (h_dot)**3 + (h_dot + (h)**3)**3
-            # return h_ddot + alphas[0]*(h_dot) + alphas[1]*(h_dot + alphas[0]*(h))
+            # return h_ddot + (h_dot)**3 + (h_dot + (h)**3)**3
+            return h_ddot + alphas[0]*(h_dot) + alphas[1]*(h_dot + alphas[0]*(h))
             # return h_ddot + alphas[0]*(1/h_dot) + alphas[1]*(h_dot + alphas[0]*(1/h))
     
     def detect_collsion(self, d=1.0):

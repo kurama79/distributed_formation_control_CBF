@@ -28,19 +28,19 @@ if __name__ == '__main__':
 
     # General variables
     agentsNumber = 3 # Number of agents in the network
-    obstaclesNumber = 8 # Number of the obstacles in the environment
-    CBFmethod = 4 # Here que define which technic of CBF use
+    obstaclesNumber = 5 # Number of the obstacles in the environment
+    CBFmethod = 9 # Here que define which technic of CBF use
     
     obstacles = generate_obstacles(obstaclesNumber, True)
     # obstacles = None
     L = generate_graph(agentsNumber, False) # Definig the Laplacian matrix
     leader, agents = generate_agents(agentsNumber, L, obstacles=obstacles, random=False, lPosition=[14, 19], CBFmethod=CBFmethod)
-    leaderQ, agentsQ = generate_agents(agentsNumber, L, obstacles=obstacles, random=False, lPosition=[14, 19], CBFmethod=6)
+    # leaderQ, agentsQ = generate_agents(agentsNumber, L, obstacles=obstacles, random=False, lPosition=[14, 19], CBFmethod=6)
     
     # Set the same positions to compare performance
-    for i, agent in enumerate(agents):
-        agentsQ[i].x_ = agent.x_
-        agentsQ[i].y_ = agent.y_
+    # for i, agent in enumerate(agents):
+    #     agentsQ[i].x_ = agent.x_
+    #     agentsQ[i].y_ = agent.y_
      
     # Define if the agents will use a oberver 
     for agent in agents:
@@ -48,44 +48,45 @@ if __name__ == '__main__':
         agent.config_data_distances(agents)
         # agent.set_observer_2nd()
         
-    for agent in agentsQ:
-        agent.set_observer_1st()
-        agent.config_data_distances(agents)
+    # for agent in agentsQ:
+    #     agent.set_observer_1st()
+    #     agent.config_data_distances(agents)
         # agent.set_observer_2nd()
 
     t = 0.0 # Time
     time_data = []
-    dt = 0.01 # Sample step
+    dt = 0.001 # Sample step
     simTime = 150
-    while t <= simTime:
+    while t <= simTime:# and not agentsQ[0].break_:
         # Main loop
             
         leader.leader_dynamic(t, dt)
-        leaderQ.leader_dynamic(t, dt)
+        # leaderQ.leader_dynamic(t, dt)
         # leader.leader_fixed(t, dt)
         for agent in agents:
         #     # agent.observation(dt)
             agent.detect_neighbors(agents)
             
         # Compare agents
-        for agent in agentsQ:
-            agent.detect_neighbors(agents)
+        # for agent in agentsQ:
+        #     agent.detect_neighbors(agents)
             
         for agent in agents:
             agent.formation_control(dt, BFC=True)
             # agent.formation_control_HO(dt)
             
-        for agent in agentsQ:
-            # agent.formation_control(dt, BFC=True)
-            agent.formation_control_HO(dt)
+        # for agent in agentsQ:
+        #     # agent.formation_control(dt, BFC=True)
+        #     agent.formation_control_HO(dt)
         
         leader.save()
-        leaderQ.save()
+        # leaderQ.save()
         for agent in agents:
             agent.save(agents)
             
-        for agent in agentsQ:
-            agent.save(agents)
+        # for agent in agentsQ:
+        #     agent.save(agents)
+            
         time_data.append(t)
         t += dt
         
@@ -102,11 +103,12 @@ if __name__ == '__main__':
     # print_object_info(leader)
     # plot_.initial_configuration(leader, agents, obstacles)
     # plot_.final_configuration(leader, agents, obstacles)
-    # plot_.variables_vs_time_1st(leader, agents, time_data, simTime)
-    plot_.variables_vs_time(leaderQ, agentsQ, time_data, simTime)
+    
+    # plot_.variables_vs_time(leaderQ, agentsQ, time_data, simTime)
     # plot_.barrier_action(agents, time_data, simTime)
-    # plot_.path(leader, agents, obst=obstacles)
-    plot_.path(leaderQ, agentsQ, obst=obstacles)
+    plot_.path(leader, agents, obst=obstacles)
+    # plot_.variables_vs_time(leader, agents, time_data, simTime)
+    # plot_.path(leaderQ, agentsQ, obst=obstacles)
     # plot_.observed_variables_1st(leader, agents, time_data, simTime)
     
 # main()

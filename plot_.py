@@ -332,6 +332,9 @@ def path(leader, agents, obst=None):
         
         cirlces = []
         for obs in obst:
+            cirlces.append(plt.Circle((obs.x_, obs.y_), obs.radius_+agents[0].radius_, color='grey'))
+            
+        for obs in obst:
             cirlces.append(plt.Circle((obs.x_, obs.y_), obs.radius_, color='black'))
             
         for circle in cirlces:
