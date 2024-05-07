@@ -49,11 +49,14 @@ class Agent:
         
         self.psi_0 = {}
         self.psi_1 = {}
+        self.psi_ag = []
+        self.psi_obs = []
         
         self.data_neighbors_distances_ = {}
         self.data_obstacles_distances_ = {}
         
         self.control_times_ = []
+        self.break_ = False
         
     def config_data_distances(self, agents):
         
@@ -361,7 +364,7 @@ class Agent:
                 def Gamma(t, z):
                     return np.exp(-t) * t**(z-1)
                 
-    def formation_control(self, dt, c1=0.05, BFC=False):
+    def formation_control(self, dt, c1=0.9, BFC=False):
         
         '''
             A formation control technic is perfoming to reach a predefined formation, it could be:
@@ -481,7 +484,7 @@ class Agent:
         
         method = self.CFB_method
             
-        if method == 1:
+        if method == 1: # Weigh recentered barrier function scheme
                         
             # Control gains
             c1 = 0.5
@@ -521,8 +524,8 @@ class Agent:
                 for obs in self.obstacles_:
                     
                     norm = np.sqrt((self.leader_.x_ - obs.x_)**2 + (self.leader_.y_ - obs.y_)**2)
-                    # k = (obs.radius_**2)/( (norm**2)*(norm**2 - obs.radius_**2) )
-                    k = 0.001
+                    k = (obs.radius_**2)/( (norm**2)*(norm**2 - obs.radius_**2) )
+                    # k = 0.001
                     
                     zx_o = self.x_ - obs.x_
                     zy_o = self.y_ - obs.y_
@@ -886,6 +889,100 @@ class Agent:
             udY = self.ud_y_ if udY is None else udY
             
             return udX, udY
+        
+        elif method == 8: # Gradient recentered barrier function scheme
+                        
+            # Control gains
+            c1 = 0.1
+            
+            Bx = 0.0         
+            By = 0.0   
+                
+            # Agents
+            if self.neighbors_:
+                
+                # Constraints parameters
+                delta_inf = self.radius_*1.2
+                
+                for n in self.neighbors_:
+                    
+                    xe = self.x_ - n.x_ #- self.disired_distance_
+                    ye = self.y_ - n.y_ #- self.disired_distance_
+                    d = np.sqrt((xe)**2 + (ye)**2)
+                    
+                    Bx += -xe/(d*(d - delta_inf)**2) - 1/delta_inf                   
+                    By += -ye/(d*(d - delta_inf)**2) - 1/delta_inf
+            
+            # Obstacles
+            if self.obstacles_:
+
+                for obs in self.obstacles_:
+                    
+                    xe = self.x_ - obs.x_ #- obs.radius_*1.2
+                    ye = self.y_ - obs.y_ #- obs.radius_*1.2 
+                    d = np.sqrt((xe)**2 + (ye)**2)
+                    
+                    Bx += -xe/(d*(d - obs.radius_*1.2)**2) - 1/obs.radius_*1.2                    
+                    By += -ye/(d*(d - obs.radius_*1.2)**2) - 1/obs.radius_*1.2  
+                    
+                    # Bx += -(xe)/(d**2 - d*obs.radius_*1.2) #- 1/obs.radius_*1.2 
+                    # By += -(ye)/(d**2 - d*obs.radius_*1.2) #- 1/obs.radius_*1.2                   
+            
+            wGx = (1)*(Bx)
+            wGy = (1)*(By)
+            
+            ux = -c1*wGx + self.ud_x_
+            uy = -c1*wGy + self.ud_y_
+            
+            return ux, uy
+        
+        elif method == 9: # Weight recentered barrier function scheme
+                        
+            # Control gains
+            c1 = 0.1
+            
+            Bx = 0.0         
+            By = 0.0      
+                
+            # Agents
+            if self.neighbors_:
+                
+                # Constraints parameters
+                delta_inf = self.radius_*1.2
+                
+                for n in self.neighbors_:
+                    
+                    xe = self.x_ - n.x_ #- self.disired_distance_
+                    ye = self.y_ - n.y_ #- self.disired_distance_
+                    d = np.sqrt((xe)**2 + (ye)**2)
+                    w = 1 + 1/d
+                    
+                    Bx += w*(-xe/(d*(d - delta_inf)**2))                  
+                    By += w*(-ye/(d*(d - delta_inf)**2))
+            
+            # Obstacles
+            if self.obstacles_:
+
+                for obs in self.obstacles_:
+                    
+                    xe = self.x_ - obs.x_ #- obs.radius_*1.2
+                    ye = self.y_ - obs.y_ #- obs.radius_*1.2 
+                    d = np.sqrt((xe)**2 + (ye)**2)
+                    w = 1 + 1/d
+                    
+                    Bx += w*(-xe/(d*(d - obs.radius_*1.2)**2))                   
+                    By += w*(-ye/(d*(d - obs.radius_*1.2)**2)) 
+                    
+                    # Bx += -(xe)/(d**2 - d*obs.radius_*1.2) #- 1/obs.radius_*1.2 
+                    # By += -(ye)/(d**2 - d*obs.radius_*1.2) #- 1/obs.radius_*1.2                   
+            
+            wGx = (1)*(Bx)
+            wGy = (1)*(By)
+            
+            ux = -c1*wGx + self.ud_x_
+            uy = -c1*wGy + self.ud_y_
+            
+            return ux, uy
     
     def HOCBF_action(self, method=2):
         
@@ -943,18 +1040,26 @@ class Agent:
                 for n in self.neighbors_:
                     
                     psi = self.HO_psi_function(n, udX, udY, b=3, obsType='robot')
+                    self.psi_ag.append(psi)
                     
                     # Consider the no reciprocal function
                     ex = self.x_ - n.x_
                     ey = self.y_ - n.y_
                     
                     # Safety control
-                    if psi < 0:
+                    if psi <= 0:
                         usX += -0.5*(ex/(ex**2 + ey**2))*psi
                         usY += -0.5*(ey/(ex**2 + ey**2))*psi
-                        
+                        # self.break_ = True
+                
                 udX += usX
                 udY += usY
+                
+            else: 
+                try:
+                    self.psi_ag.append(self.psi_ag[-1])
+                except:
+                    self.psi_ag.append(0)
                 
             if self.obstacles_:
                 
@@ -964,16 +1069,24 @@ class Agent:
                 for obs in self.obstacles_:
                     
                     psi = self.HO_psi_function(obs, udX, udY, b=1, obsType='circle')
+                    self.psi_obs.append(psi)
                     
                     ex = self.x_ - obs.x_
                     ey = self.y_ - obs.y_
                     
-                    if psi < 0:
+                    if psi <= 0:
                         usX += -0.5*(ex/(ex**2 + ey**2))*psi
                         usY += -0.5*(ey/(ex**2 + ey**2))*psi
+                        # self.break_ = True
                         
                 udX += usX
                 udY += usY
+                
+            else: 
+                try:
+                    self.psi_obs.append(self.psi_obs[-1])
+                except:
+                    self.psi_obs.append(0)
                 
             return udX, udY
         
@@ -1215,7 +1328,8 @@ class Agent:
         elif h_function == 5:
             
             arg = (x - x_o)**2 + (y - y_o)**2 - d**2
-            arg_dot = 2*(x - x_o)*(2*d**2 + 1)*u_x + 2*(y - y_o)*(2*d**2 + 1)*u_y
+            # arg_dot = 2*(x - x_o)*(2*d**2 + 1)*u_x + 2*(y - y_o)*(2*d**2 + 1)*u_y
+            arg_dot = 2*(x - x_o)*u_x + 2*(y - y_o)*u_y
             h = -np.log( arg/(1+arg) )
             h_dot = -arg_dot/(arg**2 + arg)
             
@@ -1223,15 +1337,22 @@ class Agent:
         
         return h_dot + alpha*h
     
-    def HO_psi_function(self, n, udX, udY, b=3, obsType='circle', alphas=[9.0, 4.5]):
+    def HO_psi_function(self, n, udX, udY, b=3, obsType='circle', alphas=[5.0, 5.0]):
         
         '''
             Psi function for high order method
             Select the barrier function
         '''
         
+        # # Hurwitz
+        # F = np.array([[0, 1], [0, 0]])
+        # G = np.array([[0], [1]])
+        # K = np.array([[alphas[0], 0], [0, alphas[1]]])
+        
+        # cl = F - G@K
+        
         if obsType == 'circle':
-            d = n.radius_ + self.radius_
+            d = n.radius_ + 2*self.radius_
             
         elif obsType == 'robot':
             d = n.radius_
