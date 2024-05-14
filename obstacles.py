@@ -7,12 +7,16 @@ from shapely.geometry import Polygon, Point
 
 class Obstacle:
     
-    def __init__(self, i, currentObstacles, minR, maxR, randomly, upperBound, lowerBound):
+    def __init__(self, i, currentObstacles, minR, maxR, randomly, upperBound, lowerBound, dynamic=False):
         
         self.tag_ = i
+        self.dynamic_ = dynamic 
         self.radius_ = np.random.uniform(minR, maxR)
         
         self.define_position(currentObstacles, randomly, upperBound, lowerBound)
+        self.define_velocity()
+        
+        # self.define_acceleration()
         
     def define_position(self, obstacles, rand, upB, lowB):
         
@@ -56,6 +60,18 @@ class Obstacle:
                             del currentObs
                             
                     del newObs
+                    
+        else:
+            
+            x = 0            
+            y = 5            
         
         self.x_ = x
         self.y_ = y
+        
+    def define_velocity(self):
+        
+        if not self.dynamic_:
+            
+            self.vel_x_ = 0.0
+            self.vel_y_ = 0.0
