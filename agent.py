@@ -23,6 +23,7 @@ class Agent:
         self.vel_y_ = vel[1]
         self.acc_x_ = acc[0]
         self.acc_y_ = acc[1]
+        self.acc_max_ = 2.2
         self.CFB_method = CBF
         self.agents_QP_solver_ = None
         self.obstacles_QP_solver_ = None
@@ -418,7 +419,7 @@ class Agent:
         self.vel_y_ = uy 
         self.control_times_.append(toc)
         
-    def formation_control_HO(self, dt, c1=7.5, c2=7.5):
+    def formation_control_HO(self, dt, c1=10.5, c2=7.5):
         
         '''
             A formation control technic is perfoming to reach a predefined formation, it could be:
@@ -432,7 +433,6 @@ class Agent:
         
         # Variables to get the time that the control spend
         tic = time()
-        
         
         # First order formation control
         desiredX = self.leader_.x_ + self.desired_position_[0]
@@ -984,7 +984,7 @@ class Agent:
             
             return ux, uy
     
-    def HOCBF_action(self, method=2):
+    def HOCBF_action(self, method=3):
         
         '''
             High Order Control Barrier Function (HOCBF) of relative degree "m"
@@ -1025,7 +1025,7 @@ class Agent:
             
             return udX, udY
         
-        if method == 2:
+        elif method == 2:
             
             # Calculate safety controls
             
@@ -1089,7 +1089,63 @@ class Agent:
                     self.psi_obs.append(0)
                 
             return udX, udY
-        
+    
+        elif method == 3: # Barrier function (h) with velocities 
+            
+            # Calculate safety controls
+            
+            udX = self.ud_x_
+            udY = self.ud_y_
+            
+            # Avoid agents
+            usX = 0.0
+            usY = 0.0
+            if self.neighbors_:
+                
+                acc_contsraint = True
+                
+                for n in self.neighbors_:
+                    
+                    psi = self.HO_psi_function(n, udX, udY, acc_contsraint, b=4, obsType='robot')
+                    
+                    # Consider the no reciprocal function
+                    ex = self.x_ - n.x_
+                    ey = self.y_ - n.y_
+                    z = np.sqrt(ex**2 + ey**2)
+                    
+                    # Safety control
+                    if psi <= 0:
+                        usX += -(z/ex)*psi
+                        usY += -(z/ey)*psi
+                
+                udX += usX
+                udY += usY
+                
+            if self.obstacles_:
+                
+                acc_contsraint = False
+                
+                usX = 0.0
+                usY = 0.0
+                
+                for obs in self.obstacles_:
+                    
+                    psi = self.HO_psi_function(obs, udX, udY, acc_contsraint, b=4, obsType='circle')
+                    self.psi_obs.append(psi)
+                    
+                    ex = self.x_ - obs.x_
+                    ey = self.y_ - obs.y_
+                    z = np.sqrt(ex**2 + ey**2)
+                    
+                    if psi <= 0:
+                        usX += -(z/ex)*psi
+                        usY += -(z/ey)*psi
+                        
+                udX += usX
+                udY += usY
+                
+            return udX, udY
+    
     def calculate_HO_constraints(self, obstacles, change):
         
         '''
@@ -1337,7 +1393,7 @@ class Agent:
         
         return h_dot + alpha*h
     
-    def HO_psi_function(self, n, udX, udY, b=3, obsType='circle', alphas=[5.0, 5.0]):
+    def HO_psi_function(self, n, udX, udY, accConst, b=3, obsType='circle', alphas=[5.0, 5.0]):
         
         '''
             Psi function for high order method
@@ -1418,6 +1474,38 @@ class Agent:
             # return h_ddot + (h_dot)**3 + (h_dot + (h)**3)**3
             return h_ddot + alphas[0]*(h_dot) + alphas[1]*(h_dot + alphas[0]*(h))
             # return h_ddot + alphas[0]*(1/h_dot) + alphas[1]*(h_dot + alphas[0]*(1/h))
+            
+        elif b == 4: # Barrier function (h) with velocities
+            
+            if not accConst:
+                accMax_o = 0.0
+            
+            else:
+                accMax_o = n.acc_max_
+                
+            accReac = self.acc_max_ + accMax_o
+            
+            xo_vel = n.vel_x_
+            yo_vel = n.vel_y_
+            
+            ex = x - xo 
+            ey = y - yo 
+            dist = np.sqrt(ex**2 + ey**2)
+            
+            ex_vel = x_vel - xo_vel
+            ey_vel = y_vel - yo_vel
+            
+            h = np.sqrt(2*accReac*(dist - d)) + (ex*ex_vel + ey*ey_vel)/dist
+            
+            # Partial derivatives
+            dx = (np.sqrt(2)*ex*accReac)/(2*dist*np.sqrt(accReac*(dist - d))) - (ex*(ex*ex_vel + ey*ey_vel))/(dist**3) + (ex_vel/dist)
+            dy = (np.sqrt(2)*ey*accReac)/(2*dist*np.sqrt(accReac*(dist - d))) - (ey*(ex*ex_vel + ey*ey_vel))/(dist**3) + (ey_vel/dist)
+            dvx = ex/dist
+            dvy = ey/dist
+            
+            h_dot = dx*ex_vel + dy*ey_vel + dvx*udX + dvy*udY
+            
+            return h_dot + 80.0*h
     
     def detect_collsion(self, d=1.0):
         

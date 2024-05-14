@@ -24,12 +24,11 @@ def print_object_info(obj):
 
 # ___________________________________________ Main fuction________________________________________________ 
 if __name__ == '__main__':
-# def main():
 
     # General variables
-    agentsNumber = 3 # Number of agents in the network
-    obstaclesNumber = 5 # Number of the obstacles in the environment
-    CBFmethod = 9 # Here que define which technic of CBF use
+    agentsNumber = 1 # Number of agents in the network
+    obstaclesNumber = 1 # Number of the obstacles in the environment
+    CBFmethod = 8 # Here que define which technic of CBF use
     
     obstacles = generate_obstacles(obstaclesNumber, True)
     # obstacles = None
@@ -55,7 +54,7 @@ if __name__ == '__main__':
 
     t = 0.0 # Time
     time_data = []
-    dt = 0.001 # Sample step
+    dt = 0.01 # Sample step
     simTime = 150
     while t <= simTime:# and not agentsQ[0].break_:
         # Main loop
@@ -72,8 +71,8 @@ if __name__ == '__main__':
         #     agent.detect_neighbors(agents)
             
         for agent in agents:
-            agent.formation_control(dt, BFC=True)
-            # agent.formation_control_HO(dt)
+            # agent.formation_control(dt, BFC=True)
+            agent.formation_control_HO(dt)
             
         # for agent in agentsQ:
         #     # agent.formation_control(dt, BFC=True)
@@ -107,7 +106,7 @@ if __name__ == '__main__':
     # plot_.variables_vs_time(leaderQ, agentsQ, time_data, simTime)
     # plot_.barrier_action(agents, time_data, simTime)
     plot_.path(leader, agents, obst=obstacles)
-    # plot_.variables_vs_time(leader, agents, time_data, simTime)
+    plot_.variables_vs_time(leader, agents, time_data, simTime)
     # plot_.path(leaderQ, agentsQ, obst=obstacles)
     # plot_.observed_variables_1st(leader, agents, time_data, simTime)
     
