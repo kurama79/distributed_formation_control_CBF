@@ -169,7 +169,7 @@ def generate_agents(n, L, obstacles, random=True, lPosition=[0, 0], CBFmethod=3)
     
     return leader, agents
 
-def generate_obstacles(n, randomConfiguration, minR=1.5, maxR=3.0, upperBound=10, lowerBound=-10):
+def generate_obstacles(n, randomConfiguration, minR=2.5, maxR=3.0, upperBound=10, lowerBound=-10):
     
     '''
         Generate convex fixed obstacles, with a randomly or non-randomly distribution.
