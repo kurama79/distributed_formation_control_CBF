@@ -6,6 +6,7 @@ from time import time
 from scipy.special import gamma
 from scipy import sparse
 from shapely.geometry import Point
+import sympy as sp
 
 class Agent:
 
@@ -23,7 +24,7 @@ class Agent:
         self.vel_y_ = vel[1]
         self.acc_x_ = acc[0]
         self.acc_y_ = acc[1]
-        self.acc_max_ = 2.2
+        self.acc_max_ = 10.2
         self.CFB_method = CBF
         self.agents_QP_solver_ = None
         self.obstacles_QP_solver_ = None
@@ -409,6 +410,11 @@ class Agent:
             uy = -c1*errorY + self.leader_.vel_y_
             
         toc = time() - tic
+        
+        # if ux > 5:
+        #     ux = 5
+        # if uy > 5:
+        #     uy = 5
             
         x = self.x_ + ux*dt
         y = self.y_ + uy*dt
@@ -802,7 +808,7 @@ class Agent:
                 
                 for n in self.neighbors_:
                     
-                    psi = self.psi_function(n, alpha_neigh, udX, udY, h_function=4)
+                    psi = self.psi_function(n, alpha_neigh, udX, udY)
                     
                     # Errors
                     e_x = self.x_ - n.x_
@@ -910,23 +916,72 @@ class Agent:
                     ye = self.y_ - n.y_ #- self.disired_distance_
                     d = np.sqrt((xe)**2 + (ye)**2)
                     
-                    Bx += -xe/(d*(d - delta_inf)**2) - 1/delta_inf                   
-                    By += -ye/(d*(d - delta_inf)**2) - 1/delta_inf
+                    theta = np.arctan2(ye, xe)
+                    xc = n.x_ + delta_inf*np.cos(theta)
+                    yc = n.x_ + delta_inf*np.sin(theta)
+                    dc = np.sqrt((xc)**2 + (yc)**2)
+                    
+                    Bx += -xe/(d*(d - delta_inf)**1) + xc/(dc*(dc - delta_inf)**1)                   
+                    By += -ye/(d*(d - delta_inf)**1) + yc/(dc*(dc - delta_inf)**1)
+                    
+                    # Bx += -(xe)/(d**2 - d*delta_inf) + xe/(d**2) + (xe**3 + 2*xe*ye**2)/(d**3)#- 1/obs.radius_*1.2 
+                    # By += -(ye)/(d**2 - d*delta_inf) + ye/(d**2) + (ye**3 + 2*ye*xe**2)/(d**3)
+                    
+                    # Bx += 1/(delta_inf - xe - ye) - 1/(delta_inf - xc - yc)                   
+                    # By += 1/(delta_inf - xe - ye) - 1/(delta_inf - xc - yc)                   
+                    
+                    # d_o = np.sqrt((n.x_ - delta_inf)**2 + (n.y_ - delta_inf)**2)
+                    # dh_o = 2*delta_inf**2 - 2*delta_inf*(xe + ye) + d**2
+                    
+                    # # Gradient 
+                    # x, y = sp.symbols('x y')
+                    # f_x = x*(x - delta_inf)/((2*delta_inf**2 - 2*delta_inf*(x + ye) + d**2)*(2*delta_inf**2 - 2*delta_inf*(x + ye) + x**2 + ye**2 - delta_inf))
+                    # f_y = y*(y - delta_inf)/((2*delta_inf**2 - 2*delta_inf*(xe + y) + d**2)*(2*delta_inf**2 - 2*delta_inf*(xe + y) + xe**2 + y**2 - delta_inf))
+                    
+                    # grad_x = sp.diff(f_x, x).subs(x, xe)
+                    # grad_y = sp.diff(f_y, y).subs(y, ye)
+                    
+                    # Bx += -xe/(d*(d - delta_inf)) + (xe - delta_inf)/(dh_o*(dh_o - delta_inf)) + grad_x
+                    # By += -ye/(d*(d - delta_inf)) + (ye - delta_inf)/(dh_o*(dh_o - delta_inf)) + grad_y
             
             # Obstacles
             if self.obstacles_:
 
                 for obs in self.obstacles_:
                     
+                    delta_inf = obs.radius_*1.2
+                    
                     xe = self.x_ - obs.x_ #- obs.radius_*1.2
                     ye = self.y_ - obs.y_ #- obs.radius_*1.2 
                     d = np.sqrt((xe)**2 + (ye)**2)
                     
-                    Bx += -xe/(d*(d - obs.radius_*1.2)**2) - 1/obs.radius_*1.2                    
-                    By += -ye/(d*(d - obs.radius_*1.2)**2) - 1/obs.radius_*1.2  
+                    theta = np.arctan2(ye, xe)
+                    xc = obs.x_ + delta_inf*np.cos(theta)
+                    yc = obs.x_ + delta_inf*np.sin(theta)
+                    dc = np.sqrt((xc)**2 + (yc)**2)
                     
-                    # Bx += -(xe)/(d**2 - d*obs.radius_*1.2) #- 1/obs.radius_*1.2 
-                    # By += -(ye)/(d**2 - d*obs.radius_*1.2) #- 1/obs.radius_*1.2                   
+                    Bx += -xe/(d*(d - delta_inf)**1) + xc/(dc*(dc - delta_inf)**1)                   
+                    By += -ye/(d*(d - delta_inf)**1) + yc/(dc*(dc - delta_inf)**1) 
+                    
+                    # Bx += -(xe)/(d**2 - d*obs.radius_*1.2) + xe/(d**2) + (xe**3 + 2*xe*ye**2)/(d**3)#- 1/obs.radius_*1.2 
+                    # By += -(ye)/(d**2 - d*obs.radius_*1.2) + ye/(d**2) + (ye**3 + 2*ye*xe**2)/(d**3)#- 1/obs.radius_*1.2   
+                    
+                    # Bx += 1/(delta_inf - xe - ye) - 1/(delta_inf - xc - yc)                   
+                    # By += 1/(delta_inf - xe - ye) - 1/(delta_inf - xc - yc)  
+                    
+                    # d_o = np.sqrt((n.x_ - delta_inf)**2 + (n.y_ - delta_inf)**2)
+                    # dh_o = 2*delta_inf**2 - 2*delta_inf*(xe + ye) + d**2
+                    
+                    # # Gradient 
+                    # x, y = sp.symbols('x y')
+                    # f_x = x*(x - delta_inf)/((2*delta_inf**2 - 2*delta_inf*(x + ye) + x**2 + ye**2)*(2*delta_inf**2 - 2*delta_inf*(x + ye) + x**2 + ye**2 - delta_inf))
+                    # f_y = y*(y - delta_inf)/((2*delta_inf**2 - 2*delta_inf*(xe + y) + xe**2 + y**2)*(2*delta_inf**2 - 2*delta_inf*(xe + y) + xe**2 + y**2 - delta_inf))
+                    
+                    # grad_x = float(sp.diff(f_x, x).subs(x, xe))
+                    # grad_y = float(sp.diff(f_y, y).subs(y, ye))
+                    
+                    # Bx += -xe/(d*(d - delta_inf)) + (xe - delta_inf)/(dh_o*(dh_o - delta_inf)) + grad_x
+                    # By += -ye/(d*(d - delta_inf)) + (ye - delta_inf)/(dh_o*(dh_o - delta_inf)) + grad_y             
             
             wGx = (1)*(Bx)
             wGy = (1)*(By)
@@ -968,6 +1023,7 @@ class Agent:
                     xe = self.x_ - obs.x_ #- obs.radius_*1.2
                     ye = self.y_ - obs.y_ #- obs.radius_*1.2 
                     d = np.sqrt((xe)**2 + (ye)**2)
+                    # w = 1 + 1/(obs.radius_*1.2)
                     w = 1 + 1/d
                     
                     Bx += w*(-xe/(d*(d - obs.radius_*1.2)**2))                   
@@ -983,8 +1039,77 @@ class Agent:
             uy = -c1*wGy + self.ud_y_
             
             return ux, uy
+        
+        elif method == 10: # Weight Recentered new methodology
+            
+            # Calculate safety controls
+            
+            udX = self.ud_x_
+            udY = self.ud_y_
+            
+            # Avoid agents
+            usX = 0.0
+            usY = 0.0
+            if self.neighbors_:
+                
+                for n in self.neighbors_:
+                    
+                    psi = self.psi_function(n, 1.0, udX, udY, h_function=6)
+                    
+                    # Errors
+                    e_x = self.x_ - n.x_
+                    e_y = self.y_ - n.y_
+                    
+                    norm_error = np.sqrt(e_x**2 + e_y**2)
+                    d = n.radius_ + self.radius_
+                    
+                    Lg = np.array([-e_x/(norm_error**2 - d*norm_error), 
+                                   -e_y/(norm_error**2 - d*norm_error)])
+                    
+                    # Safety controls
+                    if psi <= 0 or psi >= 0:
+                        # usX += -0.5*(e_x/(e_x**2 + e_y**2))*psi
+                        # usY += -0.5*(e_y/(e_x**2 + e_y**2))*psi
+                        
+                        usX += -0.5*(1/d)*(Lg[0]/(np.linalg.norm(Lg)) + 1/d)*psi
+                        usY += -0.5*(1/d)*(Lg[1]/(np.linalg.norm(Lg)) + 1/d)*psi
+                                            
+                # Control to avoid just neighbors agents
+                udX += usX
+                udY += usY
+            
+            if self.obstacles_:
+                # Avoid obstacles
+                usX = 0.0
+                usY = 0.0
+                for obs in self.obstacles_:
+                    
+                    psi = self.psi_function(obs, 1.0, udX, udY, h_function=6)
+                    
+                    # Errors
+                    e_x = self.x_ - obs.x_
+                    e_y = self.y_ - obs.y_
+                    norm_error = np.sqrt(e_x**2 + e_y**2)
+                    d = obs.radius_*1.2
+                    
+                    Lg = np.array([-e_x/(norm_error**2 - d*norm_error), 
+                                   -e_y/(norm_error**2 - d*norm_error)])
+                    
+                    # Safety controls
+                    if psi <= 0 or psi >= 0:
+                        # usX += -0.5*(e_x/(e_x**2 + e_y**2))*psi
+                        # usY += -0.5*(e_y/(e_x**2 + e_y**2))*psi
+                        
+                        usX += -0.5*(1/d)*(Lg[0]/(np.linalg.norm(Lg)) + 1/d)*psi
+                        usY += -0.5*(1/d)*(Lg[1]/(np.linalg.norm(Lg)) + 1/d)*psi
+                
+                # Full control
+                udX += usX
+                udY += usY
+            
+            return udX, udY
     
-    def HOCBF_action(self, method=3):
+    def HOCBF_action(self, method=5):
         
         '''
             High Order Control Barrier Function (HOCBF) of relative degree "m"
@@ -1039,7 +1164,7 @@ class Agent:
                 
                 for n in self.neighbors_:
                     
-                    psi = self.HO_psi_function(n, udX, udY, b=3, obsType='robot')
+                    psi = self.HO_psi_function(n, udX, udY, b=1, obsType='robot')
                     self.psi_ag.append(psi)
                     
                     # Consider the no reciprocal function
@@ -1114,9 +1239,9 @@ class Agent:
                     z = np.sqrt(ex**2 + ey**2)
                     
                     # Safety control
-                    if psi <= 0:
-                        usX += -(z/ex)*psi
-                        usY += -(z/ey)*psi
+                    # if psi < 0:
+                    usX += -(ex/z)*psi
+                    usY += -(ey/z)*psi
                 
                 udX += usX
                 udY += usY
@@ -1137,10 +1262,173 @@ class Agent:
                     ey = self.y_ - obs.y_
                     z = np.sqrt(ex**2 + ey**2)
                     
-                    if psi <= 0:
-                        usX += -(z/ex)*psi
-                        usY += -(z/ey)*psi
+                    # if psi < 0:
+                    usX += -(ex/z)*psi
+                    usY += -(ey/z)*psi
                         
+                udX += usX
+                udY += usY
+                
+            return udX, udY
+        
+        elif method == 4: # Gradient recentered barrier function scheme
+                        
+            # Control gains
+            c1 = 0.1
+            
+            Bx = 0.0         
+            By = 0.0   
+                
+            # Agents
+            if self.neighbors_:
+                
+                # Constraints parameters
+                delta_inf = self.radius_*1.2
+                
+                for n in self.neighbors_:
+                    
+                    xe = self.x_ - n.x_ #- self.disired_distance_
+                    ye = self.y_ - n.y_ #- self.disired_distance_
+                    v_xe = self.vel_x_ - n.vel_x_
+                    v_ye = self.vel_y_ - n.vel_y_
+                    d = np.sqrt((xe)**2 + (ye)**2)
+                    
+                    theta = np.arctan2(ye, xe)
+                    xc = n.x_ + delta_inf*np.cos(theta)
+                    yc = n.y_ + delta_inf*np.sin(theta)
+                    dc = np.sqrt((xc)**2 + (yc)**2)
+                    
+                    H = -1/(d*(delta_inf - d)**3)
+                    Hc = -1/(dc*(delta_inf - dc)**3)
+                    gradient_Hc = (4*dc - delta_inf)/((dc**3)*(delta_inf - dc)**4)
+                    
+                    theta_dot = (-ye*v_xe + xe*v_ye)/(d**2)
+                    v_xc = n.vel_x_ - delta_inf*np.sin(theta) * theta_dot
+                    v_yc = n.vel_y_ + delta_inf*np.cos(theta) * theta_dot
+                    
+                    # Bx += ((2*xe**2)/(d**4) - 1/d**2)*v_xe + ((2*xe*ye)/(d**4))*v_ye - ((2*xc**2)/(dc**4) - 1/dc**2)*v_xe - ((2*xc*yc)/(dc**4))*v_ye
+                    # By += ((2*ye**2)/(d**4) - 1/d**2)*v_xe + ((2*xe*ye)/(d**4))*v_ye - ((2*yc**2)/(dc**4) - 1/dc**2)*v_xe - ((2*xc*yc)/(dc**4))*v_ye
+                    
+                    Bx += H*v_xe - Hc*v_xc - Hc*v_xe - (xe*xc*gradient_Hc*v_xc + xe*yc*gradient_Hc*v_yc)
+                    By += H*v_ye - Hc*v_yc - Hc*v_ye - (ye*xc*gradient_Hc*v_xc + ye*yc*gradient_Hc*v_yc)
+            
+            # Obstacles
+            if self.obstacles_:
+
+                for obs in self.obstacles_:
+                    
+                    delta_inf = obs.radius_*1.2
+                    
+                    xe = self.x_ - obs.x_
+                    ye = self.y_ - obs.y_ 
+                    v_xe = self.vel_x_ - obs.vel_x_
+                    v_ye = self.vel_y_ - obs.vel_y_
+                    d = np.sqrt((xe)**2 + (ye)**2) 
+                    
+                    theta = np.arctan2(ye, xe)
+                    xc = obs.x_ + delta_inf*np.cos(theta)
+                    yc = obs.y_ + delta_inf*np.sin(theta)
+                    dc = np.sqrt((xc)**2 + (yc)**2)
+                    
+                    H = -1/(d*(delta_inf - d)**3)
+                    Hc = -1/(dc*(delta_inf - dc)**3)
+                    gradient_Hc = (4*dc - delta_inf)/((dc**3)*(delta_inf - dc)**4)
+                    
+                    # Hx = -(xe**2)/((d**3)*(delta_inf - d)) + (xe**2)/((d**2)*(delta_inf - d)**2) + 1/(d*(delta_inf - d))
+                    # Hy = -(ye**2)/((d**3)*(delta_inf - d)) + (ye**2)/((d**2)*(delta_inf - d)**2) + 1/(d*(delta_inf - d))
+                    # Hxy = (xe*ye)/((d**2)*(delta_inf - d)**2) - (xe*ye)/((d**3)*(delta_inf - d))
+                    
+                    # Hx_c = -(xc**2)/((dc**3)*(delta_inf - dc)) + (xc**2)/((dc**2)*(delta_inf - dc)**2) + 1/(dc*(delta_inf - dc))
+                    # Hy_c = -(yc**2)/((dc**3)*(delta_inf - dc)) + (yc**2)/((dc**2)*(delta_inf - dc)**2) + 1/(dc*(delta_inf - dc))
+                    # Hxy_c = (xc*yc)/((dc**2)*(delta_inf - dc)**2) - (xc*yc)/((dc**3)*(delta_inf - dc))
+                    
+                    theta_dot = (-ye*v_xe + xe*v_ye)/(d**2)
+                    v_xc = obs.vel_x_ - delta_inf*np.sin(theta) * theta_dot
+                    v_yc = obs.vel_y_ + delta_inf*np.cos(theta) * theta_dot
+                    
+                    # Bx += ((2*xe**2)/(d**4) - 1/d**2)*v_xe + ((2*xe*ye)/(d**4))*v_ye - ((2*xc**2)/(dc**4) - 1/dc**2)*v_xe - ((2*xc*yc)/(dc**4))*v_ye
+                    # By += ((2*ye**2)/(d**4) - 1/d**2)*v_xe + ((2*xe*ye)/(d**4))*v_ye - ((2*yc**2)/(dc**4) - 1/dc**2)*v_xe - ((2*xc*yc)/(dc**4))*v_ye
+                    
+                    Bx += H*v_xe - Hc*v_xc - Hc*v_xe - xe*xc*gradient_Hc*v_xc - xe*yc*gradient_Hc*v_yc
+                    By += H*v_ye - Hc*v_yc - Hc*v_ye - ye*xc*gradient_Hc*v_xc - ye*yc*gradient_Hc*v_yc       
+            
+            wGx = (1)*(Bx)
+            wGy = (1)*(By)
+            
+            # wGx = (1 + 1/d)*(Bx)
+            # wGy = (1 + 1/d)*(By)
+            
+            ux = -c1*wGx + self.ud_x_
+            uy = -c1*wGy + self.ud_y_
+            
+            # if ux == 0 and uy == 0:
+            #     ux = self.ud_x_
+            #     uy = self.ud_y_
+            
+            return ux, uy
+        
+        elif method == 5: # Weight Recentered new methodology
+            
+            # Calculate safety controls
+            
+            udX = self.ud_x_
+            udY = self.ud_y_
+            
+            # Avoid agents
+            usX = 0.0
+            usY = 0.0
+            if self.neighbors_:
+                
+                for n in self.neighbors_:
+                    
+                    psi = self.HO_psi_function(n, udX, udY, b=5)
+                    
+                    # Errors
+                    e_x = self.x_ - n.x_
+                    e_y = self.y_ - n.y_
+                    
+                    norm_error = np.sqrt(e_x**2 + e_y**2)
+                    d = n.radius_*1.2
+                    
+                    Lg = np.array([-e_x/(norm_error**2 - d*norm_error), 
+                                   -e_y/(norm_error**2 - d*norm_error)])
+                    
+                    # Safety controls
+                    if psi <= 0 or psi >= 0:
+                        # usX += -0.5*(e_x/(e_x**2 + e_y**2))*psi
+                        # usY += -0.5*(e_y/(e_x**2 + e_y**2))*psi
+                        
+                        usX += -0.5*(1/d)*(Lg[0]/(np.linalg.norm(Lg)) + 1/d)*psi
+                        usY += -0.5*(1/d)*(Lg[1]/(np.linalg.norm(Lg)) + 1/d)*psi
+                                            
+                # Control to avoid just neighbors agents
+                udX += usX
+                udY += usY
+            
+            if self.obstacles_:
+                # Avoid obstacles
+                usX = 0.0
+                usY = 0.0
+                for obs in self.obstacles_:
+                    
+                    psi = self.HO_psi_function(obs, udX, udY, b=5)
+                    
+                    # Errors
+                    e_x = self.x_ - obs.x_
+                    e_y = self.y_ - obs.y_
+                    norm_error = np.sqrt(e_x**2 + e_y**2)
+                    d = obs.radius_*1.2
+                    
+                    Lg = np.array([-e_x/(norm_error**2 - d*norm_error), 
+                                   -e_y/(norm_error**2 - d*norm_error)])
+                    
+                    # Safety controls
+                    if psi <= 0 or psi >= 0:
+                        
+                        usX += -(0.5)*(Lg[0]/(np.linalg.norm(Lg)))*psi
+                        usY += -(0.5)*(Lg[1]/(np.linalg.norm(Lg)))*psi
+                
+                # Full control
                 udX += usX
                 udY += usY
                 
@@ -1354,6 +1642,8 @@ class Agent:
             h_dot = 2*(x - x_o)*u_x + 2*(y - y_o)*u_y
             h = (x - x_o)**2 + (y - y_o)**2 - d**2
             
+            return h_dot + h**3 
+            
         elif h_function == 2:
             
             arg = np.sqrt((x - x_o)**2 + (y - y_o)**2) - d
@@ -1361,7 +1651,7 @@ class Agent:
             h = -np.log(arg)
             h_dot = arg_dot/arg
             
-            # h = 1/h
+            h = 1/h
             
         elif h_function == 3:
             
@@ -1391,21 +1681,39 @@ class Agent:
             
             h = 1/h
         
-        return h_dot + alpha*h
+        elif h_function == 6: # New Recentered Barrier Function
+            
+            w = 1 + 1/d
+            delta = 0.8
+            
+            arg = np.sqrt((x - x_o)**2 + (y - y_o)**2) - d
+            arg_dot = ((x - x_o)*u_x + (y - y_o)*u_y)/np.sqrt((x - x_o)**2 + (y - y_o)**2)
+            arg_dot_relaxed = 2 - np.sqrt((x - x_o)**2 + (y - y_o)**2)/d 
+            
+            # arg = (x - x_o)**2 + (y - y_o)**2 - d
+            # arg_dot = 2*(x - x_o)*u_x + 2*(y - y_o)*u_y            
+            
+            if arg > delta:
+                h = -np.log(-arg) + np.log(d)
+                h_dot = -arg_dot/arg #+ (u_x + u_y)/d
+                
+            else:
+                # h = (np.exp(1 - (arg/d)) - 1 - np.log(d))
+                h = (1/2)*(((arg+d - 2*delta)/delta)**2 - 1) - np.log(delta) + np.log(d)
+                # h_dot = -(u_x*((x - x_o)*np.exp(arg_dot_relaxed)) + u_y*((y - y_o)*np.exp(arg_dot_relaxed)))/(d*np.sqrt((x - x_o)**2 + (y - y_o)**2))
+                h_dot = (((x - x_o) - (2*delta*(x - x_o))/(arg+d))*u_x + ((y - y_o) - (2*delta*(y - y_o))/(arg+d))*u_y)/delta**2
+            
+            h = w*h
+            h_dot *= w
+        
+        return h_dot + h**3
     
-    def HO_psi_function(self, n, udX, udY, accConst, b=3, obsType='circle', alphas=[5.0, 5.0]):
+    def HO_psi_function(self, n, udX, udY, accConst=None, b=1, obsType='circle', alphas=[10.0, 6.0]):
         
         '''
             Psi function for high order method
             Select the barrier function
         '''
-        
-        # # Hurwitz
-        # F = np.array([[0, 1], [0, 0]])
-        # G = np.array([[0], [1]])
-        # K = np.array([[alphas[0], 0], [0, alphas[1]]])
-        
-        # cl = F - G@K
         
         if obsType == 'circle':
             d = n.radius_ + 2*self.radius_
@@ -1435,7 +1743,7 @@ class Agent:
             
             # return h_ddot + alphas[1]*(h_dot + alphas[0]*h) + alphas[0]*(h_dot)
             return h_ddot + alphas[0]*h_dot + alphas[1]*(h_dot + alphas[0]*h) 
-            # return h_ddot + (h_dot + h**3)**3 + (h_dot)**3
+            # return h_ddot + (h_dot)**2 + (h_dot + h**2)**2
             
         elif b == 2: # For the first barrier function (reciprocal)
             
@@ -1505,7 +1813,52 @@ class Agent:
             
             h_dot = dx*ex_vel + dy*ey_vel + dvx*udX + dvy*udY
             
-            return h_dot + 80.0*h
+            return h_dot + 30*h
+        
+        elif b == 5: # New Recentered Barrier Function
+            
+            w = 0.5
+            # delta = d*0.1
+            delta = 0.3
+            
+            arg = np.sqrt((x - xo)**2 + (y - yo)**2) - d
+            arg_dot = ((x - xo)*x_vel + (y - yo)*y_vel)/np.sqrt((x - xo)**2 + (y - yo)**2)
+            
+            # Scond derivative variables
+            distance = arg + d
+            xe = x - xo 
+            ye = y - yo 
+            
+            if arg > delta:
+                
+                ddx = (d*ye*(ye*x_vel - xe*y_vel) + distance*(2*y_vel*xe*ye + x_vel*(xe**2 - ye**2)))/(distance*(-d*distance + distance**2)**2) 
+                ddy = (d*xe*(xe*y_vel - ye*x_vel) + distance*(y_vel*(ye**2 - xe**2) + 2*x_vel*xe*ye))/(distance*(-d*distance + distance**2)**2) 
+                dddx = -(xe)/(-d*distance + distance**2) 
+                dddy = -(ye)/(-d*distance + distance**2) 
+                
+                h = -np.log(arg) + np.log(d)
+                h_dot = -arg_dot/arg 
+                h_ddot = ddx*x_vel + ddy*y_vel + dddx*udX + dddy*udY
+                
+            else:
+                
+                sm_ddx =  (d*ye*(y_vel*xe - ye*x_vel) + 2*delta*ye*(-ye*x_vel + y_vel*xe) + x_vel*distance**3)/((delta**2)*distance**3) 
+                sm_ddy =  (d*xe*(ye*x_vel - y_vel*xe) + 2*delta*xe*(-y_vel*xe + ye*x_vel) + y_vel*distance**3)/((delta**2)*distance**3) 
+                sm_dddx = xe*(-d - 2*delta + distance)/(distance*delta**2) 
+                sm_dddy = ye*(-d - 2*delta + distance)/(distance*delta**2) 
+                
+                h = (1/2)*(((arg - 2*delta)/delta)**2 - 1) - np.log(delta) + np.log(d)
+                h_dot = (xe*x_vel + ye*y_vel)*(-d - 2*delta + distance)/(distance*delta**2)
+                h_ddot = sm_ddx*x_vel + sm_ddy*y_vel + sm_dddx*udX + sm_dddy*udY
+                
+            h *= w
+            h_dot *= w
+            h_ddot *= w
+            epsilon_ = 0.00000000000000000001
+            
+            # return h_ddot + (h_dot)**3 + (h_dot + (h)**3)**3
+            # return h_ddot + 1*(h_dot+epsilon_)**(-1) + 1*(h_dot+epsilon_ + 1*(h+epsilon_)**(-1))**(-1)
+            return h_ddot + 0.1*(h_dot) + 0.15*(h_dot + 0.1*(h))
     
     def detect_collsion(self, d=1.0):
         
