@@ -1154,7 +1154,7 @@ class Agent:
             
             # Calculate safety controls
             
-            udX = self.ud_x_
+            udX = self.udsketch_x_
             udY = self.ud_y_
             
             # Avoid agents
@@ -1398,8 +1398,8 @@ class Agent:
                         # usX += -0.5*(e_x/(e_x**2 + e_y**2))*psi
                         # usY += -0.5*(e_y/(e_x**2 + e_y**2))*psi
                         
-                        usX += -0.5*(1/d)*(Lg[0]/(np.linalg.norm(Lg)) + 1/d)*psi
-                        usY += -0.5*(1/d)*(Lg[1]/(np.linalg.norm(Lg)) + 1/d)*psi
+                        usX += -0.5*(Lg[0]/(np.linalg.norm(Lg)))*psi
+                        usY += -0.5*(Lg[1]/(np.linalg.norm(Lg)))*psi
                                             
                 # Control to avoid just neighbors agents
                 udX += usX
@@ -1730,10 +1730,10 @@ class Agent:
         xo = n.x_
         yo = n.y_
         
-        d = n.radius_ + self.radius_
+        d = n.radius_ + 1.1*self.radius_
         
-        x_vel = self.vel_x_
-        y_vel = self.vel_y_
+        x_vel = self.vel_x_ - n.vel_x_ 
+        y_vel = self.vel_y_ - n.vel_y_ 
         
         if b == 1: # For the first barrier function (distance)
             
@@ -1817,19 +1817,24 @@ class Agent:
         
         elif b == 5: # New Recentered Barrier Function
             
-            w = 0.5
+            # w = 0.1
+            w = 1 - d/np.linalg.norm([25, 25], np.inf)
             # delta = d*0.1
-            delta = 0.3
+            delta = 0.2
             
-            arg = np.sqrt((x - xo)**2 + (y - yo)**2) - d
+            arg = np.sqrt((x - xo)**2 + (y - yo)**2) - d 
             arg_dot = ((x - xo)*x_vel + (y - yo)*y_vel)/np.sqrt((x - xo)**2 + (y - yo)**2)
             
             # Scond derivative variables
-            distance = arg + d
+            distance = arg + d 
             xe = x - xo 
             ye = y - yo 
+            theta = np.arctan2(ye, xe) 
+            x_d = xo + d*np.cos(theta) 
+            y_d = yo + d*np.sin(theta) 
             
-            if arg > delta:
+            # if arg > delta:
+            if True:
                 
                 ddx = (d*ye*(ye*x_vel - xe*y_vel) + distance*(2*y_vel*xe*ye + x_vel*(xe**2 - ye**2)))/(distance*(-d*distance + distance**2)**2) 
                 ddy = (d*xe*(xe*y_vel - ye*x_vel) + distance*(y_vel*(ye**2 - xe**2) + 2*x_vel*xe*ye))/(distance*(-d*distance + distance**2)**2) 
@@ -1837,8 +1842,8 @@ class Agent:
                 dddy = -(ye)/(-d*distance + distance**2) 
                 
                 h = -np.log(arg) + np.log(d)
-                h_dot = -arg_dot/arg 
-                h_ddot = ddx*x_vel + ddy*y_vel + dddx*udX + dddy*udY
+                h_dot = -arg_dot/arg + (x_vel + y_vel)/d 
+                h_ddot = ddx*x_vel + ddy*y_vel + dddx*udX + dddy*udY + (x_vel + y_vel)/d**2 + (udX + udY)/d
                 
             else:
                 
@@ -1850,15 +1855,16 @@ class Agent:
                 h = (1/2)*(((arg - 2*delta)/delta)**2 - 1) - np.log(delta) + np.log(d)
                 h_dot = (xe*x_vel + ye*y_vel)*(-d - 2*delta + distance)/(distance*delta**2)
                 h_ddot = sm_ddx*x_vel + sm_ddy*y_vel + sm_dddx*udX + sm_dddy*udY
-                
+            
             h *= w
             h_dot *= w
             h_ddot *= w
             epsilon_ = 0.00000000000000000001
             
-            # return h_ddot + (h_dot)**3 + (h_dot + (h)**3)**3
-            # return h_ddot + 1*(h_dot+epsilon_)**(-1) + 1*(h_dot+epsilon_ + 1*(h+epsilon_)**(-1))**(-1)
-            return h_ddot + 0.1*(h_dot) + 0.15*(h_dot + 0.1*(h))
+            return h_ddot + (h_dot)**(3/2) + (h_dot + (h)**(3/2))**(3/2)
+            # return h_ddot + (h_dot)**(2/3) + (h_dot + (h)**(2/3))**(2/3)
+            # return h_ddot + 0.1*(h_dot+epsilon_)**(-1) + 0.1*(h_dot+epsilon_ + 0.1*(h+epsilon_)**(-1))**(-1)
+            # return h_ddot + 0.1*(h_dot) + 0.15*(h_dot + 0.1*(h))
     
     def detect_collsion(self, d=1.0):
         
