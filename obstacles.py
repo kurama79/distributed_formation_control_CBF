@@ -41,7 +41,7 @@ class Obstacle:
                     
                     x = np.random.uniform(lowB, upB)
                     y = np.random.uniform(lowB, upB)
-                    newObs = Point(x, y).buffer(self.radius_)
+                    newObs = Point(x, y).buffer(self.radius_*2.0)
                     
                     for obs in obstacles:
                         
