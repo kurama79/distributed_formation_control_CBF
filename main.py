@@ -10,6 +10,12 @@ import numpy as np
 from config import *
 import plot_
 
+# General variables
+NUMBER_OF_AGENTS = 3 # Number of agents in the network
+NUMBER_OF_OBSTACLES = 6 # Number of the obstacles in the environment
+CBF_METHOD = 10 # Here que define which technic of CBF use
+SIMULATION_TIME = 90
+
 def print_object_info(obj):
     
     '''
@@ -24,16 +30,11 @@ def print_object_info(obj):
 
 # ___________________________________________ Main fuction________________________________________________ 
 if __name__ == '__main__':
-
-    # General variables
-    agentsNumber = 1 # Number of agents in the network
-    obstaclesNumber = 5 # Number of the obstacles in the environment
-    CBFmethod = 10 # Here que define which technic of CBF use
-    
-    obstacles = generate_obstacles(obstaclesNumber, True)
+ 
+    obstacles = generate_obstacles(NUMBER_OF_OBSTACLES, True)
     # obstacles = None
-    L = generate_graph(agentsNumber, False) # Definig the Laplacian matrix
-    leader, agents = generate_agents(agentsNumber, L, obstacles=obstacles, random=False, lPosition=[14, 19], CBFmethod=CBFmethod)
+    L = generate_graph(NUMBER_OF_AGENTS, False) # Definig the Laplacian matrix
+    leader, agents = generate_agents(NUMBER_OF_AGENTS, L, obstacles=obstacles, random=False, lPosition=[14, 19], CBFmethod=CBF_METHOD)
      
     # Define if the agents will use a oberver 
     for agent in agents:
@@ -43,9 +44,8 @@ if __name__ == '__main__':
 
     t = 0.0 # Time
     time_data = []
-    dt = 0.01 # Sample step
-    simTime = 90
-    while t <= simTime:# and not agentsQ[0].break_:
+    dt = 0.001 # Sample step
+    while t <= SIMULATION_TIME:# and not agentsQ[0].break_:
         # Main loop
             
         # leader.leader_dynamic(t, dt)
